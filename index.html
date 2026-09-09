@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Rosace — calculateur de moiré</title>
+  <meta name="description" content="Calculateur de moiré prépresse. Offset, flexo, anilox, mesh, scanner. Page autonome, sans installation." />
+  <meta name="theme-color" content="#0c0c0d" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0c0c0d;
+      --surface: #141416;
+      --surface-2: #1c1c1f;
+      --surface-3: #26262a;
+      --fg: #eeeae3;
+      --muted: #9a958c;
+      --subtle: #6e6a63;
+      --border: #2c2b28;
+      --accent: #e7e1d6;
+      --accent-fg: #121110;
+      --paper: #f1ece2;
+      --danger: #e07070;
+      --warn: #d4a054;
+      --ok: #7d9b75;
+      --info: #8a9bb0;
+      --radius: 12px;
+      --radius-xl: 24px;
+      --font: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+      --display: "Fraunces", "Times New Roman", serif;
+      --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--font); line-height: 1.5; -webkit-font-smoothing: antialiased; }
+    button:not(:disabled), [role="button"] { cursor: pointer; }
+    h1, h2, h3 { font-family: var(--display); font-weight: 500; letter-spacing: -0.03em; text-wrap: balance; margin: 0; }
+    p { text-wrap: pretty; }
+    .wrap { max-width: 72rem; margin: 0 auto; padding: 0 1rem 3rem; }
+    header.top { border-bottom: 1px solid var(--border); }
+    header.top .inner { max-width: 72rem; margin: 0 auto; padding: 1.4rem 1rem; display: flex; flex-wrap: wrap; gap: 1rem; justify-content: space-between; align-items: flex-end; }
+    .kicker { font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--subtle); }
+    .lead { margin: 0.4rem 0 0; color: var(--muted); font-size: 0.92rem; max-width: 28rem; }
+    .actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .btn { display: inline-flex; align-items: center; gap: 0.4rem; height: 2.25rem; padding: 0 0.8rem; border: 0; border-radius: 8px; font: 500 0.78rem/1 var(--font); color: var(--fg); background: var(--surface-2); box-shadow: 0 0 0 1px rgb(255 255 255 / 0.08); }
+    .btn:hover { background: var(--surface-3); }
+    .btn.ghost { background: transparent; box-shadow: none; color: var(--muted); }
+    .btn.ghost:hover { background: var(--surface-2); color: var(--fg); }
+    .verdict { margin-top: 1.5rem; padding: 1.1rem 1.2rem; border-radius: var(--radius-xl); background: var(--surface); box-shadow: 0 0 0 1px rgb(255 255 255 / 0.08); display: flex; gap: 1rem; align-items: flex-start; }
+    .dot { width: 0.7rem; height: 0.7rem; border-radius: 50%; margin-top: 0.45rem; flex-shrink: 0; }
+    .verdict h2 { font-size: 1.5rem; }
+    .verdict p { margin: 0.3rem 0 0; color: var(--muted); font-size: 0.9rem; }
+    .grid { display: grid; gap: 1.5rem; margin-top: 1.5rem; }
+    @media (min-width: 960px) { .grid { grid-template-columns: minmax(0, 20rem) minmax(0, 1fr); } }
+    .card { background: var(--surface); border-radius: var(--radius-xl); padding: 1.1rem; box-shadow: 0 0 0 1px rgb(255 255 255 / 0.08); }
+    .card h2 { font-size: 1.15rem; margin-bottom: 0.8rem; }
+    .presets { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.9rem; }
+    .chip { height: 1.85rem; padding: 0 0.65rem; border: 0; border-radius: 6px; font: 500 0.72rem/1 var(--font); color: var(--muted); background: var(--surface-2); }
+    .chip.on { background: var(--accent); color: var(--accent-fg); }
+    .row { display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.7rem; }
+    .unit { display: inline-flex; background: var(--surface-2); border-radius: 6px; padding: 0.15rem; }
+    .unit button { height: 1.7rem; padding: 0 0.55rem; border: 0; border-radius: 4px; background: transparent; color: var(--muted); font: 500 0.72rem var(--font); }
+    .unit button.on { background: var(--accent); color: var(--accent-fg); }
+    .screen { background: var(--surface-2); border-radius: var(--radius); padding: 0.8rem; margin-bottom: 0.6rem; box-shadow: 0 0 0 1px rgb(255 255 255 / 0.06); }
+    .screen.off { opacity: 0.48; }
+    .screen head, .screen-head { display: flex; align-items: center; gap: 0.45rem; margin-bottom: 0.6rem; }
+    .swatch { width: 0.6rem; height: 0.6rem; border-radius: 50%; flex-shrink: 0; }
+    .screen input[type="text"] { flex: 1; min-width: 0; background: transparent; border: 0; color: var(--fg); font: 500 0.9rem var(--font); outline: none; }
+    .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 0.7rem; }
+    label.field { display: block; font-size: 0.75rem; color: var(--muted); }
+    label.field span { display: flex; justify-content: space-between; margin-bottom: 0.25rem; }
+    label.field b { font-family: var(--mono); font-weight: 400; color: var(--fg); }
+    input[type="range"] { width: 100%; accent-color: var(--accent); }
+    input[type="number"] { width: 100%; height: 2rem; background: var(--surface-3); border: 0; border-radius: 6px; color: var(--fg); padding: 0 0.5rem; font: 400 0.85rem var(--mono); }
+    .add { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.6rem; }
+    .sheet { display: grid; gap: 1rem; }
+    @media (min-width: 640px) { .sheet { grid-template-columns: 1fr 1fr; } }
+    .toolbar { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.7rem; align-items: center; }
+    canvas.paper { width: 100%; aspect-ratio: 1; background: var(--paper); border-radius: 12px; display: block; box-shadow: 0 18px 40px -24px rgb(0 0 0 / 0.55); }
+    svg.rose { width: 100%; aspect-ratio: 1; background: var(--surface-2); border-radius: 12px; display: block; }
+    .hint { font-size: 0.75rem; color: var(--subtle); margin: 0.6rem 0 0; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+    th { text-align: left; color: var(--subtle); font-weight: 500; padding: 0.35rem; }
+    td { padding: 0.4rem 0.35rem; border-top: 1px solid var(--border); }
+    td button.pair { background: transparent; border: 0; color: var(--fg); font: 500 0.8rem var(--font); padding: 0; }
+    .badge { display: inline-block; padding: 0.1rem 0.45rem; border-radius: 4px; font-size: 0.68rem; font-weight: 600; letter-spacing: 0.02em; }
+    .pairs { display: flex; flex-direction: column; gap: 0.45rem; margin-top: 0.8rem; }
+    .pair-card { text-align: left; width: 100%; background: var(--surface-2); border: 0; border-radius: 10px; padding: 0.7rem 0.8rem; color: inherit; box-shadow: 0 0 0 1px rgb(255 255 255 / 0.05); }
+    .pair-card.on { box-shadow: 0 0 0 1px var(--accent); }
+    .pair-card small { color: var(--muted); display: block; margin-top: 0.2rem; }
+    .detail { margin-top: 1rem; padding: 0.9rem; background: var(--surface-2); border-radius: 12px; font-size: 0.88rem; color: var(--muted); }
+    .guide details { background: var(--surface); border-radius: var(--radius-xl); padding: 0.9rem 1.1rem; margin-top: 1.5rem; box-shadow: 0 0 0 1px rgb(255 255 255 / 0.08); }
+    .guide summary { cursor: pointer; font-family: var(--display); font-size: 1.1rem; }
+    .guide article { color: var(--muted); font-size: 0.9rem; }
+    .guide h3 { font-size: 1rem; color: var(--fg); margin: 1rem 0 0.3rem; }
+    footer.note { margin-top: 2rem; color: var(--subtle); font-size: 0.75rem; }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <div class="inner">
+      <div>
+        <p class="kicker">Tramé · prépresse</p>
+        <h1 style="font-size:2.6rem;line-height:0.95;margin-top:0.2rem;">Rosace</h1>
+        <p class="lead">Risque de moiré selon linéatures et angles. Offset, flexo, anilox, mesh, scanner. Page autonome — aucun serveur, aucun compte.</p>
+      </div>
+      <div class="actions">
+        <button class="btn" id="copyBtn" type="button">Rapport</button>
+        <button class="btn ghost" id="resetBtn" type="button">Reset</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="wrap">
+    <section class="verdict" id="verdict"></section>
+    <div class="grid">
+      <aside class="card" id="screens"></aside>
+      <div>
+        <section class="card">
+          <div class="sheet">
+            <div>
+              <div class="toolbar">
+                <h2>Feuille</h2>
+                <div class="unit" id="scope"></div>
+                <div class="unit" id="marks"></div>
+              </div>
+              <canvas class="paper" id="sheet" width="512" height="512" aria-label="Simulation de trame"></canvas>
+              <label class="field" style="margin-top:0.7rem;">
+                <span>Champ <b id="viewLabel">6 mm</b></span>
+                <input type="range" id="viewMm" min="3" max="18" step="1" value="6" />
+              </label>
+            </div>
+            <div>
+              <h2>Rose des angles</h2>
+              <svg class="rose" id="rose" viewBox="0 0 320 320" role="img" aria-label="Rose des angles"></svg>
+              <p class="hint">Sur une trame carrée, 0° et 90° sont le même axe. Un écart de 60° équivaut à 30°.</p>
+            </div>
+          </div>
+        </section>
+        <section class="card" style="margin-top:1.5rem;">
+          <h2>Paires</h2>
+          <div id="matrix"></div>
+          <div class="pairs" id="pairs"></div>
+          <div class="detail" id="detail"></div>
+        </section>
+      </div>
+    </div>
+    <section class="guide">
+      <details open>
+        <summary>Comment lire le moiré</summary>
+        <article>
+          <h3>La rosace</h3>
+          <p>En offset, cyan, magenta et noir se placent à 30° (15°, 75°, 45°). Le jaune reste à 0° : son contraste est faible, le 15° est un compromis ISO 12647, pas une erreur.</p>
+          <h3>Période</h3>
+          <p>Plus la période du battement est grande, plus le moiré est visible. Sous ~0,4 mm, il se fond à distance de lecture. Au-delà de 2 mm, c’est un motif évident.</p>
+          <h3>Flexo / anilox</h3>
+          <p>Décalez les angles de 7,5°. L’anilox hexagonal doit être 4 à 6 fois plus fin que la plaque. Un 1:1 ou un axe commun produit un moiré lourd.</p>
+          <h3>Scanner</h3>
+          <p>Le capteur (0°/90°) bat avec la trame du document. Tournez l’original d’environ 15°, changez la résolution, ou désamez.</p>
+        </article>
+      </details>
+    </section>
+    <p class="footer note">Rosace calcule le moiré du 1er ordre entre trames AM. Les réglages restent dans ce navigateur. Ouvrez ce fichier n’importe où — il n’a besoin d’aucune installation.</p>
+  </div>
+
+  <script>
+  (() => {
+    const LPI_PER_LPCM = 2.54, MM_PER_INCH = 25.4, DEG = Math.PI / 180, EPS = 1e-9;
+    const INK_HEX = { C:"#1aa3c4", M:"#c43a6e", Y:"#d6b43a", K:"#d8d2c8", spot:"#7ea38a", anilox:"#8a9bb0", mesh:"#b08968", scan:"#9a958c" };
+    const INK_ON_PAPER = { C:"#00a0c8", M:"#d0126a", Y:"#e6c200", K:"#1a1916", spot:"#5a3d7a", anilox:"#4a5564", mesh:"#6a4a32", scan:"#33322e" };
+    const ROLE_CONTRAST = { C:0.55, M:0.7, Y:0.16, K:1, spot:0.85, anilox:0.9, mesh:0.75, scan:1 };
+    const RISK_LABEL = { rosace:"Rosace", ok:"Acceptable", watch:"À surveiller", risk:"Risqué", critical:"Critique" };
+    const RISK_RANK = { rosace:0, ok:1, watch:2, risk:3, critical:4 };
+    const RISK_COLOR = { rosace:"#8a9bb0", ok:"#7d9b75", watch:"#d4a054", risk:"#d4864a", critical:"#e07070" };
+    const LATTICE_LABEL = { square:"Carrée", hex:"Hexagonale" };
+    const ISO = { C:15, M:75, Y:0, K:45 };
+    const FLEXO = { C:7.5, M:67.5, Y:82.5, K:37.5 };
+
+    function cmyk(lpi, a = ISO) {
+      return [
+        { id:"C", name:"Cyan", role:"C", enabled:true, lpi, angle:a.C, lattice:"square" },
+        { id:"M", name:"Magenta", role:"M", enabled:true, lpi, angle:a.M, lattice:"square" },
+        { id:"Y", name:"Jaune", role:"Y", enabled:true, lpi, angle:a.Y, lattice:"square" },
+        { id:"K", name:"Noir", role:"K", enabled:true, lpi, angle:a.K, lattice:"square" },
+      ];
+    }
+    const PRESETS = [
+      { id:"iso-150", name:"Offset 150 LPI", screens:cmyk(150) },
+      { id:"iso-175", name:"Offset 175 LPI", screens:cmyk(175) },
+      { id:"iso-200", name:"Offset 200 LPI", screens:cmyk(200) },
+      { id:"news-85", name:"Journal 85 LPI", screens:cmyk(85) },
+      { id:"flexo-120", name:"Flexo 120 LPI", screens:cmyk(120, FLEXO) },
+      { id:"flexo-anilox", name:"Flexo + anilox", screens:[...cmyk(120, FLEXO), { id:"anilox", name:"Anilox", role:"anilox", enabled:true, lpi:800, angle:60, lattice:"hex" }] },
+      { id:"scan-300", name:"Scan 300 dpi", screens:[...cmyk(150), { id:"scan", name:"Capteur", role:"scan", enabled:true, lpi:300, angle:0, lattice:"square" }] },
+      { id:"silkscreen", name:"Sérigraphie", screens:[
+        { id:"K", name:"Noir", role:"K", enabled:true, lpi:55, angle:45, lattice:"square" },
+        { id:"mesh", name:"Mesh", role:"mesh", enabled:true, lpi:120, angle:22.5, lattice:"hex" },
+      ]},
+    ];
+    const ADDABLE = [
+      { role:"spot", name:"Pantone", lpi:150, angle:45, lattice:"square" },
+      { role:"anilox", name:"Anilox", lpi:800, angle:60, lattice:"hex" },
+      { role:"mesh", name:"Mesh", lpi:120, angle:22.5, lattice:"hex" },
+      { role:"scan", name:"Capteur", lpi:300, angle:0, lattice:"square" },
+    ];
+
+    const clone = (s) => s.map((x) => ({ ...x }));
+    function mag(v){ return Math.hypot(v.x, v.y); }
+    function sub(a,b){ return { x:a.x-b.x, y:a.y-b.y }; }
+    function angleBetween(a,b){
+      const na = mag(a), nb = mag(b);
+      if (na < EPS || nb < EPS) return 0;
+      const cos = Math.max(-1, Math.min(1, (a.x*b.x + a.y*b.y)/(na*nb)));
+      return Math.acos(cos)/DEG;
+    }
+    function frequencyVectors(lpi, angleDeg, lattice){
+      const f = Math.abs(lpi), th = angleDeg * DEG;
+      if (lattice === "hex") {
+        return [0,60,120].map((o) => {
+          const a = th + o*DEG;
+          return { x:f*Math.cos(a), y:f*Math.sin(a) };
+        });
+      }
+      return [{ x:f*Math.cos(th), y:f*Math.sin(th) }, { x:-f*Math.sin(th), y:f*Math.cos(th) }];
+    }
+    function primaryMoire(a,b){
+      const v1 = frequencyVectors(a.lpi, a.angle, a.lattice);
+      const v2 = frequencyVectors(b.lpi, b.angle, b.lattice);
+      let best = Infinity, bestDelta = 0;
+      for (const u of v1) for (const v of v2) {
+        const m = mag(sub(u,v)), d = angleBetween(u,v);
+        if (m < best - 1e-12 || (Math.abs(m-best)<1e-12 && d < bestDelta)) { best = m; bestDelta = d; }
+      }
+      if (!Number.isFinite(best) || best < EPS) return { frequencyLpi:0, periodIn:Infinity, periodMm:Infinity, angleDeltaDeg:bestDelta };
+      return { frequencyLpi:best, periodIn:1/best, periodMm:MM_PER_INCH/best, angleDeltaDeg:bestDelta };
+    }
+    function angleFactor(d){ if(d>=27)return 0.35; if(d>=20)return 0.55; if(d>=12)return 1.15; if(d>=7)return 1.7; return 2.5; }
+    function pairScore(periodMm, delta, contrast){
+      if (!Number.isFinite(periodMm) || periodMm > 40) return 80 * Math.max(contrast, 0.05);
+      return (periodMm / 0.4) * angleFactor(delta) * contrast;
+    }
+    function classifyPair(periodMm, delta, contrast){
+      const score = pairScore(periodMm, delta, contrast);
+      const coincidence = !Number.isFinite(periodMm) || periodMm > 8;
+      const strong = contrast >= 0.3, chromatic = contrast >= 0.25;
+      if (coincidence && contrast > 0.05) return "critical";
+      if (delta < 8 && strong && (coincidence || periodMm > 1.0)) return "critical";
+      if (periodMm > 2.2 && chromatic) return "critical";
+      if (score >= 3.4) return "critical";
+      if (delta < 20 && strong && periodMm > 0.4) return "risk";
+      if (periodMm > 1.15 && chromatic) return "risk";
+      if (score >= 1.55) return "risk";
+      if (delta < 18 && contrast > 0.12 && periodMm > 0.45) return "watch";
+      if (periodMm > 0.75 && chromatic) return "watch";
+      if (score >= 0.55) return "watch";
+      if (delta >= 26 && delta <= 35 && periodMm < 0.9) return "rosace";
+      return "ok";
+    }
+    function fmt(n, d=2){ if(!Number.isFinite(n)) return "∞"; if(n>=100) return "> 100"; return n.toLocaleString("fr-FR",{minimumFractionDigits:d, maximumFractionDigits:d}); }
+    function fmtLpi(lpi){ if(!Number.isFinite(lpi)||lpi<0.05) return "≈ 0"; return lpi.toLocaleString("fr-FR",{maximumFractionDigits:lpi>=20?0:1}); }
+    function fmtA(d){ return d.toLocaleString("fr-FR",{maximumFractionDigits:1}); }
+    function formatDelta(d){ return `${fmtA(d)}°`; }
+    function pairNote(p){
+      const { periodMm, angleDeltaDeg:d, risk, aRole, bRole } = p;
+      const yellow = aRole==="Y"||bRole==="Y", anilox=aRole==="anilox"||bRole==="anilox", scan=aRole==="scan"||bRole==="scan";
+      const t = Number.isFinite(periodMm) ? `${periodMm.toLocaleString("fr-FR",{maximumFractionDigits:2})} mm` : "infinie";
+      if (risk==="critical" && (!Number.isFinite(periodMm)||periodMm>8))
+        return `Les axes de ${p.aName} et ${p.bName} coïncident (écart ${formatDelta(d)}). Toute micro-dérive produit un moiré très gros (période ${t}). Décalez l’une des trames de 15° ou 30°.`;
+      if (risk==="critical") return `Moiré linéaire grossier (période ${t}, écart ${formatDelta(d)}). Inacceptable en impression. Visez 30° entre couleurs soutenues, ou un ratio de linéatures très élevé (anilox 4:1 à 6:1).`;
+      if (anilox && risk==="risk") return `Interaction plaque / anilox visible (période ${t}). Augmentez le ratio anilox (4–6× la linéature plaque) ou décalez l’angle de 7,5°.`;
+      if (scan && (risk==="risk"||risk==="watch")) return `Le capteur (grille 0°/90°) bat avec la trame du document. Tournez l’original de ~15°, changez la résolution, ou désamez (descreen).`;
+      if (yellow && d>=12 && d<=18) return `Écart classique de 15° avec le jaune (période ${t}). Toléré : le jaune a un faible contraste. Ne pas copier cet écart entre cyan, magenta et noir.`;
+      if (risk==="risk") return `Écart ${formatDelta(d)} trop faible pour deux couleurs soutenues (période ${t}). Placez-les à 30° (ou 60°, équivalent sur trame carrée).`;
+      if (risk==="watch") return `Texture perceptible (période ${t}, écart ${formatDelta(d)}). Acceptable de loin ou sur journal ; risqué en imitation-photo.`;
+      if (risk==="rosace") return `Rosace à ${formatDelta(d)} (période ${t}). C’est le standard offset entre C, M et K (ISO 12647).`;
+      return `Battement fin (période ${t}, écart ${formatDelta(d)}). Peu visible à distance de lecture.`;
+    }
+    function analyzePair(a,b){
+      const m = primaryMoire(a,b);
+      const contrast = ROLE_CONTRAST[a.role]*ROLE_CONTRAST[b.role];
+      const risk = classifyPair(m.periodMm, m.angleDeltaDeg, contrast);
+      const base = { aId:a.id, bId:b.id, aName:a.name, bName:b.name, aRole:a.role, bRole:b.role, ...m, contrast, risk, note:"" };
+      base.note = pairNote(base);
+      return base;
+    }
+    function analyzeJob(screens){
+      const active = screens.filter((s)=>s.enabled && s.lpi>0);
+      const pairs = [];
+      for (let i=0;i<active.length;i++) for (let j=i+1;j<active.length;j++) pairs.push(analyzePair(active[i], active[j]));
+      const worst = pairs.length ? pairs.reduce((a,p)=> RISK_RANK[p.risk]>RISK_RANK[a.risk]?p:a) : null;
+      const cmk = ["C","M","K"].map((r)=>active.find((s)=>s.role===r)).filter(Boolean);
+      const cmkPairs = pairs.filter((p)=>["C","M","K"].includes(p.aRole)&&["C","M","K"].includes(p.bRole));
+      const hasCmkRosette = cmk.length===3 && cmkPairs.length===3 && cmkPairs.every((p)=>p.angleDeltaDeg>=25 && p.angleDeltaDeg<=35);
+      let overall = worst ? worst.risk : "ok";
+      if (hasCmkRosette && overall==="ok") overall="rosace";
+      if (hasCmkRosette && overall==="watch") {
+        const ny = pairs.filter((p)=>p.aRole!=="Y"&&p.bRole!=="Y");
+        const w = ny.reduce((a,p)=>!a||RISK_RANK[p.risk]>RISK_RANK[a.risk]?p:a, null);
+        if (w && RISK_RANK[w.risk]<=RISK_RANK.ok) overall="rosace";
+      }
+      if (hasCmkRosette && worst && (worst.aRole==="Y"||worst.bRole==="Y") && RISK_RANK[worst.risk]<=RISK_RANK.watch) overall="rosace";
+      let headline="Ajoutez au moins deux trames", summary="Activez deux écrans ou plus (encres, anilox, trame scannée) pour estimer le moiré.";
+      if (worst && active.length>=2) {
+        if (overall==="rosace") { headline = hasCmkRosette ? "Rosace CMK stable" : "Rosace favorable"; summary = hasCmkRosette ? "Cyan, magenta et noir sont à 30°. Le 15° du jaune est le compromis offset habituel." : worst.note; }
+        else if (overall==="ok") { headline="Moiré peu visible"; summary=worst.note; }
+        else if (overall==="watch") { headline="Texture à surveiller"; summary=`Pire paire : ${worst.aName} × ${worst.bName}. ${worst.note}`; }
+        else if (overall==="risk") { headline="Risque de moiré"; summary=`Pire paire : ${worst.aName} × ${worst.bName}. ${worst.note}`; }
+        else { headline="Moiré critique"; summary=`Pire paire : ${worst.aName} × ${worst.bName}. ${worst.note}`; }
+      }
+      return { pairs, worst, overall, headline, summary, hasCmkRosette };
+    }
+
+    const KEY = "rosace-autonome-v1";
+    let state = {
+      screens: clone(PRESETS[0].screens),
+      unit: "lpi",
+      selectedPair: null,
+      markType: "dots",
+      simScope: "all",
+      viewMm: 6,
+      presetId: "iso-150",
+    };
+    try {
+      const saved = JSON.parse(localStorage.getItem(KEY) || "null");
+      if (saved && Array.isArray(saved.screens)) state = { ...state, ...saved };
+    } catch {}
+    function persist(){ try { localStorage.setItem(KEY, JSON.stringify(state)); } catch {} }
+
+    const $ = (id) => document.getElementById(id);
+
+    function job(){ return analyzeJob(state.screens); }
+
+    function renderVerdict(){
+      const j = job();
+      $("verdict").innerHTML = `<span class="dot" style="background:${RISK_COLOR[j.overall]}"></span>
+        <div><p class="kicker">${RISK_LABEL[j.overall]}</p><h2>${j.headline}</h2><p>${j.summary}</p></div>`;
+    }
+
+    function ruling(lpi){ return state.unit==="lpcm" ? lpi/LPI_PER_LPCM : lpi; }
+    function fromRuling(v){ return state.unit==="lpcm" ? v*LPI_PER_LPCM : v; }
+
+    function renderScreens(){
+      const unit = state.unit==="lpcm" ? "l/cm" : "LPI";
+      const chips = PRESETS.map((p)=>`<button class="chip ${state.presetId===p.id?"on":""}" data-preset="${p.id}">${p.name}</button>`).join("");
+      const cards = state.screens.map((s) => {
+        const canDel = ["spot","anilox","mesh","scan"].includes(s.role);
+        return `<article class="screen ${s.enabled?"":"off"}">
+          <div class="screen-head">
+            <span class="swatch" style="background:${INK_HEX[s.role]}"></span>
+            <input type="text" value="${s.name.replace(/"/g,""")}" data-name="${s.id}" aria-label="Nom" />
+            <button class="btn ghost" data-toggle="${s.id}" type="button">${s.enabled?"On":"Off"}</button>
+            ${canDel?`<button class="btn ghost" data-del="${s.id}" type="button" aria-label="Retirer">×</button>`:""}
+          </div>
+          <div class="fields">
+            <label class="field"><span>Angle <b>${fmtA(s.angle)}°</b></span>
+              <input type="range" min="0" max="90" step="0.5" value="${s.angle}" data-angle="${s.id}" /></label>
+            <label class="field"><span>${unit} <b>${ruling(s.lpi).toLocaleString("fr-FR",{maximumFractionDigits:1})}</b></span>
+              <input type="range" min="${state.unit==="lpcm"?4:10}" max="${s.role==="anilox"||s.role==="scan"? (state.unit==="lpcm"?470:1200):(state.unit==="lpcm"?120:300)}" step="${state.unit==="lpcm"?0.5:1}" value="${ruling(s.lpi)}" data-lpi="${s.id}" /></label>
+          </div>
+          <p class="hint">${LATTICE_LABEL[s.lattice]} · ${s.role}</p>
+        </article>`;
+      }).join("");
+      $("screens").innerHTML = `
+        <h2>Trames</h2>
+        <div class="presets">${chips}</div>
+        <div class="row">
+          <div class="unit">
+            <button class="${state.unit==="lpi"?"on":""}" data-unit="lpi">LPI</button>
+            <button class="${state.unit==="lpcm"?"on":""}" data-unit="lpcm">l/cm</button>
+          </div>
+          <button class="btn ghost" id="isoBtn" type="button">Angles ISO / flexo</button>
+        </div>
+        ${cards}
+        <div class="add">${ADDABLE.map((a)=>`<button class="btn" data-add="${a.role}" type="button">+ ${a.name}</button>`).join("")}</div>
+      `;
+    }
+
+    function pairKey(p){ return `${p.aId}:${p.bId}`; }
+
+    function renderPairs(){
+      const j = job();
+      const ids = state.screens.filter((s)=>s.enabled).map((s)=>s.id);
+      let table = "";
+      if (ids.length) {
+        table = `<table><thead><tr><th></th>${ids.map((id)=>`<th>${state.screens.find((s)=>s.id===id).name}</th>`).join("")}</tr></thead><tbody>`;
+        for (const a of ids) {
+          table += `<tr><th>${state.screens.find((s)=>s.id===a).name}</th>`;
+          for (const b of ids) {
+            if (a===b) { table += `<td>—</td>`; continue; }
+            const p = j.pairs.find((x)=>(x.aId===a&&x.bId===b)||(x.aId===b&&x.bId===a));
+            table += `<td>${p?`<span class="badge" style="background:${RISK_COLOR[p.risk]}22;color:${RISK_COLOR[p.risk]}">${RISK_LABEL[p.risk]}</span>`:""}</td>`;
+          }
+          table += `</tr>`;
+        }
+        table += `</tbody></table>`;
+      }
+      $("matrix").innerHTML = table;
+      $("pairs").innerHTML = j.pairs.map((p)=>{
+        const on = state.selectedPair && pairKey(p)===state.selectedPair.join(":");
+        return `<button class="pair-card ${on?"on":""}" data-pair="${pairKey(p)}" type="button">
+          <strong>${p.aName} × ${p.bName}</strong>
+          <span class="badge" style="margin-left:0.4rem;background:${RISK_COLOR[p.risk]}22;color:${RISK_COLOR[p.risk]}">${RISK_LABEL[p.risk]}</span>
+          <small>δ ${fmtA(p.angleDeltaDeg)}° · T ${fmt(p.periodMm)} mm · f ${fmtLpi(p.frequencyLpi)} LPI</small>
+        </button>`;
+      }).join("");
+      const sel = state.selectedPair
+        ? j.pairs.find((p)=>pairKey(p)===state.selectedPair.join(":"))
+        : j.worst;
+      $("detail").textContent = sel ? sel.note : "Sélectionnez une paire pour le détail.";
+    }
+
+    function drawSheet(){
+      const canvas = $("sheet");
+      const ctx = canvas.getContext("2d");
+      const dpr = Math.min(window.devicePixelRatio||1, 2);
+      const css = Math.max(1, Math.round(canvas.getBoundingClientRect().width));
+      if (canvas.width !== Math.floor(css*dpr)) { canvas.width = Math.floor(css*dpr); canvas.height = Math.floor(css*dpr); }
+      ctx.setTransform(dpr,0,0,dpr,0,0);
+      ctx.fillStyle = "#f1ece2";
+      ctx.fillRect(0,0,css,css);
+      const j = job();
+      let list = state.screens.filter((s)=>s.enabled && s.lpi>0);
+      if (state.simScope==="pair") {
+        const key = state.selectedPair ? state.selectedPair.join(":") : (j.worst ? `${j.worst.aId}:${j.worst.bId}` : "");
+        const [a,b] = key.split(":");
+        list = list.filter((s)=>s.id===a||s.id===b);
+      }
+      const ppi = css / (state.viewMm / MM_PER_INCH);
+      for (const s of list) {
+        const pitch = ppi / Math.max(s.lpi,1);
+        if (pitch < 1.05) continue;
+        ctx.save();
+        ctx.translate(css/2, css/2);
+        ctx.rotate(s.angle*DEG);
+        ctx.fillStyle = INK_ON_PAPER[s.role];
+        ctx.strokeStyle = INK_ON_PAPER[s.role];
+        const span = css*1.7, start = -span/2, count = Math.ceil(span/pitch)+2;
+        if (state.markType==="lines") {
+          ctx.globalAlpha = s.role==="Y"?0.45:0.58;
+          ctx.lineWidth = Math.max(0.6, pitch*0.22);
+          for (let i=0;i<count;i++){ const x=start+i*pitch; ctx.beginPath(); ctx.moveTo(x,-span/2); ctx.lineTo(x,span/2); ctx.stroke(); }
+        } else {
+          const r = Math.max(0.55, pitch*Math.sqrt(0.18/Math.PI));
+          ctx.globalAlpha = s.role==="Y"?0.8:0.9;
+          if (count*count<=18000) {
+            for (let i=0;i<count;i++) for (let k=0;k<count;k++) {
+              ctx.beginPath(); ctx.arc(start+i*pitch, start+k*pitch, r, 0, Math.PI*2); ctx.fill();
+            }
+          }
+        }
+        ctx.restore();
+      }
+    }
+
+    function drawRose(){
+      const svg = $("rose");
+      const cx=160, cy=160, R=118;
+      const ticks = Array.from({length:12}, (_,i)=>{
+        const a = (i*15-90)*DEG;
+        const inner = i%6===0? R-14:R-8;
+        return `<line x1="${cx+inner*Math.cos(a)}" y1="${cy+inner*Math.sin(a)}" x2="${cx+R*Math.cos(a)}" y2="${cy+R*Math.sin(a)}" stroke="#2c2b28" stroke-width="1"/>`;
+      }).join("");
+      const labels = [0,15,30,45,60,75,90,105,120,135,150,165].map((d)=>{
+        const a=(d-90)*DEG;
+        return `<text x="${cx+(R+18)*Math.cos(a)}" y="${cy+(R+18)*Math.sin(a)}" text-anchor="middle" dominant-baseline="middle" fill="#6e6a63" font-size="9" font-family="IBM Plex Mono,monospace">${d}°</text>`;
+      }).join("");
+      const needles = state.screens.filter((s)=>s.enabled).map((s)=>{
+        const a=(s.angle-90)*DEG;
+        const x2=cx+R*Math.cos(a), y2=cy+R*Math.sin(a);
+        const x3=cx+R*Math.cos(a+Math.PI), y3=cy+R*Math.sin(a+Math.PI);
+        return `<line x1="${x3}" y1="${y3}" x2="${x2}" y2="${y2}" stroke="${INK_HEX[s.role]}" stroke-width="2.4" stroke-linecap="round"/>
+                <circle cx="${x2}" cy="${y2}" r="4.2" fill="${INK_HEX[s.role]}"/>`;
+      }).join("");
+      svg.innerHTML = `<circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="#2c2b28"/>${ticks}${labels}${needles}<circle cx="${cx}" cy="${cy}" r="4" fill="#eeeae3"/>`;
+    }
+
+    function renderChrome(){
+      $("scope").innerHTML = `<button class="${state.simScope==="all"?"on":""}" data-scope="all">Toutes</button>
+        <button class="${state.simScope==="pair"?"on":""}" data-scope="pair">Paire</button>`;
+      $("marks").innerHTML = `<button class="${state.markType==="dots"?"on":""}" data-mark="dots">Points</button>
+        <button class="${state.markType==="lines"?"on":""}" data-mark="lines">Traits</button>`;
+      $("viewMm").value = state.viewMm;
+      $("viewLabel").textContent = `${state.viewMm} mm`;
+    }
+
+    function render(){
+      persist();
+      renderVerdict();
+      renderScreens();
+      renderChrome();
+      renderPairs();
+      drawSheet();
+      drawRose();
+    }
+
+    document.body.addEventListener("click", (e) => {
+      const t = e.target.closest("[data-preset],[data-unit],[data-toggle],[data-del],[data-add],[data-pair],[data-scope],[data-mark],#isoBtn,#copyBtn,#resetBtn");
+      if (!t) return;
+      if (t.dataset.preset) {
+        const p = PRESETS.find((x)=>x.id===t.dataset.preset);
+        state.presetId = p.id; state.screens = clone(p.screens); state.selectedPair = null;
+      } else if (t.dataset.unit) {
+        state.unit = t.dataset.unit;
+      } else if (t.dataset.toggle) {
+        state.screens = state.screens.map((s)=>s.id===t.dataset.toggle?{...s,enabled:!s.enabled}:s);
+      } else if (t.dataset.del) {
+        state.screens = state.screens.filter((s)=>s.id!==t.dataset.del);
+        if (state.selectedPair && state.selectedPair.includes(t.dataset.del)) state.selectedPair=null;
+      } else if (t.dataset.add) {
+        const spec = ADDABLE.find((a)=>a.role===t.dataset.add);
+        const n = state.screens.filter((s)=>s.role===spec.role).length+1;
+        state.screens = [...state.screens, { id:`${spec.role}-${Date.now()}`, name: spec.role==="spot"?`Pantone ${n}`:spec.name, role:spec.role, enabled:true, lpi:spec.lpi, angle:spec.angle, lattice:spec.lattice }];
+      } else if (t.dataset.pair) {
+        const [a,b] = t.dataset.pair.split(":");
+        state.selectedPair = [a,b];
+      } else if (t.dataset.scope) {
+        state.simScope = t.dataset.scope;
+      } else if (t.dataset.mark) {
+        state.markType = t.dataset.mark;
+      } else if (t.id==="isoBtn") {
+        const hasAnilox = state.screens.some((s)=>s.role==="anilox"&&s.enabled);
+        const table = hasAnilox ? FLEXO : ISO;
+        state.screens = state.screens.map((s)=>{
+          if (s.role in table) return { ...s, angle: table[s.role] };
+          if (s.role==="anilox") return { ...s, angle:60, lattice:"hex" };
+          return s;
+        });
+      } else if (t.id==="resetBtn") {
+        state = { screens:clone(PRESETS[0].screens), unit:"lpi", selectedPair:null, markType:"dots", simScope:"all", viewMm:6, presetId:"iso-150" };
+      } else if (t.id==="copyBtn") {
+        const j = job();
+        const lines = ["Rosace — rapport de moiré", j.headline, j.summary, "", "Trames :",
+          ...state.screens.filter((s)=>s.enabled).map((s)=>`• ${s.name}  ${fmtA(s.angle)}°  ${state.unit==="lpcm"?`${(s.lpi/LPI_PER_LPCM).toFixed(1)} l/cm`:`${s.lpi} LPI`}  (${s.lattice==="hex"?"hex":"carrée"})`),
+          "", "Paires :",
+          ...j.pairs.map((p)=>`• ${p.aName} × ${p.bName}  δ=${fmtA(p.angleDeltaDeg)}°  T=${fmt(p.periodMm)} mm  f=${fmtLpi(p.frequencyLpi)} LPI  ${RISK_LABEL[p.risk]}`)
+        ].join("\n");
+        navigator.clipboard.writeText(lines).then(()=>{ t.textContent="Copié"; setTimeout(()=>t.textContent="Rapport",1600); }).catch(()=>{});
+        return;
+      }
+      render();
+    });
+
+    document.body.addEventListener("input", (e) => {
+      const el = e.target;
+      if (el.id==="viewMm") { state.viewMm = Number(el.value); renderChrome(); drawSheet(); persist(); return; }
+      if (el.dataset.angle) {
+        state.screens = state.screens.map((s)=>s.id===el.dataset.angle?{...s, angle:Number(el.value)}:s);
+        render();
+      } else if (el.dataset.lpi) {
+        state.screens = state.screens.map((s)=>s.id===el.dataset.lpi?{...s, lpi:fromRuling(Number(el.value))}:s);
+        render();
+      } else if (el.dataset.name) {
+        state.screens = state.screens.map((s)=>s.id===el.dataset.name?{...s, name:el.value}:s);
+        persist();
+      }
+    });
+
+    window.addEventListener("resize", () => { drawSheet(); });
+    render();
+  })();
+  </script>
+</body>
+</html>
