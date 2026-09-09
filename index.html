@@ -206,6 +206,11 @@
     ];
 
     const clone = (s) => s.map((x) => ({ ...x }));
+    function esc(t){
+      return String(t).replace(/[&<>"']/g, (c) =>
+        ({ "&":"&", "<":"<", ">":">", '"':"&#34;", "'":"&#39;" }[c])
+      );
+    }
     function mag(v){ return Math.hypot(v.x, v.y); }
     function sub(a,b){ return { x:a.x-b.x, y:a.y-b.y }; }
     function angleBetween(a,b){
@@ -348,7 +353,7 @@
         return `<article class="screen ${s.enabled?"":"off"}">
           <div class="screen-head">
             <span class="swatch" style="background:${INK_HEX[s.role]}"></span>
-            <input type="text" value="${s.name.replace(/"/g,""")}" data-name="${s.id}" aria-label="Nom" />
+            <input type="text" value="${esc(s.name)}" data-name="${s.id}" aria-label="Nom" />
             <button class="btn ghost" data-toggle="${s.id}" type="button">${s.enabled?"On":"Off"}</button>
             ${canDel?`<button class="btn ghost" data-del="${s.id}" type="button" aria-label="Retirer">×</button>`:""}
           </div>
@@ -557,7 +562,11 @@
     });
 
     window.addEventListener("resize", () => { drawSheet(); });
-    render();
+    try { render(); } catch (err) {
+      const v = document.getElementById("verdict");
+      if (v) v.innerHTML = "<h2>Erreur</h2><p>" + String(err && err.message || err) + "</p>";
+      console.error(err);
+    }
   })();
   </script>
 </body>
